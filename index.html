@@ -1,0 +1,509 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>별과 우주 게임방</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+KR:wght@400;500;700;900&display=swap" rel="stylesheet">
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-database-compat.js"></script>
+<script src="https://cdnjs.cloudflare.com/ajax/libs/qrcodejs/1.0.0/qrcode.min.js"></script>
+<script>
+/* =====================================================================
+   ★ Firebase 설정 — 여기만 바꾸면 됩니다 ★
+   레이싱 게임(element-game 프로젝트) index.html에 있는 firebaseConfig를
+   그대로 복사해서 아래 { } 안에 붙여 넣으세요.
+   (Firebase 콘솔 → 프로젝트 설정 → 내 앱 → SDK 설정 및 구성에서도 볼 수 있어요)
+   ===================================================================== */
+const FIREBASE_CONFIG = {
+  apiKey: "여기에-붙여넣기",
+  authDomain: "",
+  databaseURL: "",
+  projectId: "",
+  storageBucket: "",
+  messagingSenderId: "",
+  appId: ""
+};
+</script>
+<style>
+:root{--bg:#070b1a;--panel:#0f1631;--panel2:#152048;--line:#28346a;--text:#eef1ff;--muted:#a3acd6;--dim:#6f79a8;--gold:#ffd36b;--blue:#7cc4ff;--pink:#ff8fb1;--green:#6fe0a8;--red:#ff7a7a}
+*{box-sizing:border-box;-webkit-tap-highlight-color:transparent}
+html,body{margin:0;height:100%}
+body{background:radial-gradient(ellipse at 70% -10%,#1b2352 0%,#070b1a 60%) fixed;color:var(--text);font-family:"Noto Sans KR",system-ui,"Malgun Gothic",sans-serif;line-height:1.5;font-size:17px;overflow-x:hidden}
+button{font:inherit;cursor:pointer;touch-action:manipulation}
+.wrap{max-width:1280px;margin:0 auto;padding:18px 16px 40px}
+.card{background:linear-gradient(180deg,var(--panel2),var(--panel));border:1px solid var(--line);border-radius:18px;padding:18px}
+.btn{background:var(--panel2);border:2px solid #3a4a8c;color:var(--text);border-radius:14px;padding:12px 18px;font-size:18px;font-weight:700;min-height:56px}
+.btn:active{transform:scale(.97)}
+.btn.pri{background:var(--gold);color:#1b1400;border-color:var(--gold)}
+.btn.blue{background:#2a5bd7;border-color:#4b7cff}
+.btn.ghost{background:transparent}
+.btn:disabled{opacity:.4;cursor:default}
+.btn.sm{min-height:40px;padding:6px 12px;font-size:15px}
+.row{display:flex;gap:12px;flex-wrap:wrap;align-items:center}
+.center{text-align:center}
+h1{font-size:clamp(30px,5vw,52px);font-weight:900;margin:0;letter-spacing:-1px}
+h2{font-size:clamp(22px,3vw,32px);font-weight:900;margin:0 0 6px}
+.muted{color:var(--muted)}.dim{color:var(--dim);font-size:14px}.gold{color:var(--gold)}.green{color:var(--green)}.red{color:var(--red)}.blue{color:var(--blue)}
+input.tx{width:100%;background:#0a1130;border:2px solid var(--line);color:var(--text);border-radius:14px;padding:14px;font-size:22px;font-weight:700;text-align:center}
+input.tx:focus{outline:none;border-color:var(--gold)}
+.hide{display:none!important}
+.gamepick{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+@media(max-width:760px){.gamepick{grid-template-columns:1fr}}
+.gcard{cursor:pointer;border:2px solid var(--line);transition:.15s}
+.gcard.on{border-color:var(--gold);box-shadow:0 0 0 3px rgba(255,211,107,.25)}
+.gcard .ic{font-size:44px}
+.code{font-size:clamp(60px,10vw,120px);font-weight:900;letter-spacing:12px;color:var(--gold);line-height:1}
+.chips{display:flex;flex-wrap:wrap;gap:8px;align-content:flex-start;align-items:flex-start}
+.chip{background:#1a2656;border:1px solid #33427a;border-radius:999px;padding:6px 14px;font-weight:700;font-size:16px;animation:pop .3s}
+@keyframes pop{from{transform:scale(.6);opacity:0}to{transform:none;opacity:1}}
+.hostgrid{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(280px,1fr);gap:16px;align-items:start}
+@media(max-width:900px){.hostgrid{grid-template-columns:1fr}}
+.qtitle{font-size:clamp(22px,2.8vw,34px);font-weight:900;line-height:1.35;margin:4px 0 10px}
+.clue{background:#0a1130;border:1px solid var(--line);border-radius:14px;padding:14px 16px;font-size:clamp(18px,2.2vw,26px);line-height:1.6}
+.clue b{color:var(--gold)}
+.timer{font-size:56px;font-weight:900;line-height:1;font-variant-numeric:tabular-nums}
+.timerbar{height:12px;background:#0a1130;border-radius:6px;overflow:hidden;border:1px solid var(--line)}
+.timerbar i{display:block;height:100%;background:linear-gradient(90deg,var(--green),var(--gold),var(--red));transition:width .25s linear}
+.lb{display:flex;flex-direction:column;gap:6px}
+.lbr{display:grid;grid-template-columns:40px 1fr auto auto;gap:10px;align-items:center;background:#0a1130;border:1px solid var(--line);border-radius:12px;padding:8px 12px;font-size:18px}
+.lbr .rk{font-weight:900;color:var(--gold);text-align:center}
+.lbr .sc{font-weight:900}
+.lbr .dl{font-size:14px;font-weight:700;min-width:60px;text-align:right}
+.dist{display:flex;flex-direction:column;gap:8px}
+.drow{display:grid;grid-template-columns:minmax(90px,auto) 1fr 52px;gap:10px;align-items:center;font-size:18px}
+.dbar{height:26px;background:#0a1130;border-radius:8px;overflow:hidden;border:1px solid var(--line)}
+.dbar i{display:block;height:100%;background:#4b6cd6}
+.dbar i.ok{background:var(--green)}
+.ansbox{background:rgba(111,224,168,.1);border:2px solid var(--green);border-radius:16px;padding:14px 18px}
+.ansbox .big{font-size:clamp(28px,4vw,46px);font-weight:900;color:var(--green)}
+/* student */
+.pbar{display:flex;justify-content:space-between;align-items:center;gap:10px;background:rgba(10,17,48,.9);border-bottom:1px solid var(--line);padding:10px 16px;position:sticky;top:0;z-index:5}
+.pbar .nm{font-weight:900}
+.pbar .sc{font-weight:900;color:var(--gold);font-size:20px}
+.keypad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px}
+.keypad button{min-height:64px;font-size:28px;font-weight:900;border-radius:14px;background:#1a2656;border:2px solid #33427a;color:var(--text)}
+.numdisp{display:flex;align-items:center;justify-content:center;gap:10px;font-size:44px;font-weight:900;text-align:center;background:#0a1130;border:2px solid var(--gold);border-radius:14px;padding:6px 10px;min-height:70px;font-variant-numeric:tabular-nums}
+.bets{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+.bets button{min-height:62px;border-radius:14px;background:#1a2656;border:2px solid #33427a;color:var(--text);font-weight:900;font-size:17px;line-height:1.15}
+.bets button.on{background:var(--gold);color:#1b1400;border-color:var(--gold)}
+.opts{display:grid;grid-template-columns:1fr 1fr;gap:12px}
+@media(max-width:520px){.opts{grid-template-columns:1fr}}
+.opts button{min-height:76px;border-radius:16px;font-size:21px;font-weight:900;border:3px solid #33427a;background:#1a2656;color:var(--text);padding:10px}
+.opts button.on{border-color:var(--gold);background:#3a3410}
+.opts button:nth-child(1){box-shadow:inset 6px 0 0 #ff7a7a}.opts button:nth-child(2){box-shadow:inset 6px 0 0 #7cc4ff}.opts button:nth-child(3){box-shadow:inset 6px 0 0 #6fe0a8}.opts button:nth-child(4){box-shadow:inset 6px 0 0 #ffd36b}
+.result{border-radius:22px;padding:26px 18px;text-align:center}
+.result.ok{background:linear-gradient(180deg,#14533b,#0d3326);border:2px solid var(--green)}
+.result.ng{background:linear-gradient(180deg,#5a1e2c,#35111b);border:2px solid var(--red)}
+.result.na{background:var(--panel);border:2px solid var(--line)}
+.result .em{font-size:64px;line-height:1}
+.result .dl{font-size:40px;font-weight:900}
+canvas.sky{width:100%;display:block;border-radius:14px;background:#02040d;border:1px solid #1b2550;touch-action:manipulation}
+.skytools{display:grid;grid-template-columns:repeat(4,1fr);gap:8px;margin-top:8px}
+.skytools button{min-height:52px;border-radius:12px;background:#1a2656;border:2px solid #33427a;color:var(--text);font-weight:900;font-size:16px}
+.skytools button.on{background:var(--blue);color:#05112a;border-color:var(--blue)}
+.waiting{font-size:22px;font-weight:700;text-align:center;padding:30px 10px}
+.spin{display:inline-block;width:38px;height:38px;border:4px solid #33427a;border-top-color:var(--gold);border-radius:50%;animation:sp 1s linear infinite}
+@keyframes sp{to{transform:rotate(360deg)}}
+.podium{display:flex;justify-content:center;align-items:flex-end;gap:14px;margin:20px 0}
+.pod{text-align:center;width:min(28vw,220px)}
+.pod .blk{border-radius:14px 14px 0 0;display:flex;align-items:flex-start;justify-content:center;padding-top:10px;font-size:44px;font-weight:900;color:#1b1400}
+.pod .nm{font-size:clamp(18px,2.4vw,28px);font-weight:900;margin-bottom:4px;word-break:keep-all}
+.pod .sc{color:var(--gold);font-weight:900;margin-bottom:6px}
+.warn{background:#3b1520;border:2px solid var(--red);border-radius:14px;padding:16px;margin:10px 0}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#1a2656;border:1px solid var(--gold);padding:10px 18px;border-radius:12px;z-index:50;font-weight:700}
+.explain{font-size:clamp(16px,1.8vw,21px);line-height:1.6}
+.tag{display:inline-block;padding:3px 12px;border-radius:999px;background:rgba(255,211,107,.15);color:var(--gold);font-weight:900;font-size:15px}
+.mult{display:inline-block;padding:3px 12px;border-radius:999px;background:var(--pink);color:#2a0612;font-weight:900;font-size:15px;animation:pop .4s}
+#qrbox img,#qrbox canvas{background:#fff;padding:10px;border-radius:12px;width:220px;height:220px}
+</style>
+</head>
+<body>
+<div id="app"></div>
+
+<script>
+"use strict";
+/* ================= 공통 ================= */
+const $=(s,r=document)=>r.querySelector(s), $$=(s,r=document)=>[...r.querySelectorAll(s)];
+const app=$('#app');
+const esc=s=>String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
+const clamp=(x,a,b)=>Math.max(a,Math.min(b,x));
+function rng(seed){return function(){seed|=0;seed=seed+0x6D2B79F5|0;let t=Math.imul(seed^seed>>>15,1|seed);t=t+Math.imul(t^t>>>7,61|t)^t;return((t^t>>>14)>>>0)/4294967296;}}
+function toast(m){const t=document.createElement('div');t.className='toast';t.textContent=m;document.body.appendChild(t);setTimeout(()=>t.remove(),2200);}
+const params=new URLSearchParams(location.search);
+const ROOT='stargames';
+
+/* ================= DB (Firebase 또는 모의 DB) ================= */
+let db=null, offset=0;
+const now=()=>Date.now()+offset;
+function mockDB(){
+  // 테스트용 모의 DB (?mock=1): 같은 브라우저의 여러 탭끼리 변경 기록을 주고받아 동기화
+  const ch=new BroadcastChannel('sg_mock');const listeners=[];let tree={};
+  const parts=p=>p.split('/').filter(Boolean);
+  const get=(t,p)=>{let n=t;for(const k of parts(p)){if(n==null||typeof n!=='object')return null;n=n[k];}return n===undefined?null:n;};
+  const setAt=(p,v)=>{const ks=parts(p);if(!ks.length){tree=v==null?{}:JSON.parse(JSON.stringify(v));return;}let n=tree;for(let i=0;i<ks.length-1;i++){if(typeof n[ks[i]]!=='object'||n[ks[i]]===null)n[ks[i]]={};n=n[ks[i]];}if(v===null||v===undefined)delete n[ks[ks.length-1]];else n[ks[ks.length-1]]=JSON.parse(JSON.stringify(v));};
+  const apply=op=>{op.forEach(([p,v])=>setAt(p,v));};
+  const keys=()=>Object.keys(localStorage).filter(k=>k.startsWith('sgop_')).sort();
+  const seen=new Set();keys().forEach(k=>{seen.add(k);try{apply(JSON.parse(localStorage.getItem(k)));}catch(e){}});
+  const fire=()=>listeners.forEach(l=>{const v=get(tree,l.p);const s=JSON.stringify(v);if(s!==l.last){l.last=s;l.cb({val:()=>v==null?null:JSON.parse(s)});}});
+  let seq=0;const commit=op=>{const k='sgop_'+Date.now().toString(36).padStart(10,'0')+'_'+(seq++).toString(36).padStart(4,'0')+Math.random().toString(36).slice(2,6);seen.add(k);try{localStorage.setItem(k,JSON.stringify(op));}catch(e){}apply(op);ch.postMessage({k,op});setTimeout(fire,0);return Promise.resolve();};
+  ch.onmessage=e=>{if(seen.has(e.data.k))return;seen.add(e.data.k);apply(e.data.op);fire();};
+  const ref=p=>({
+    set(v){return commit([[p,v]]);},
+    update(o){return commit(Object.keys(o).map(k=>[p+'/'+k,o[k]]));},
+    remove(){return commit([[p,null]]);},
+    once(){const v=get(tree,p);return Promise.resolve({val:()=>v==null?null:JSON.parse(JSON.stringify(v))});},
+    on(ev,cb){const l={p,cb,last:undefined};listeners.push(l);setTimeout(fire,0);return cb;},
+    off(ev,cb){const i=listeners.findIndex(l=>l.p===p&&(!cb||l.cb===cb));if(i>=0)listeners.splice(i,1);}
+  });
+  return{ref};
+}
+function initDB(){
+  if(params.get('mock')==='1'){db=mockDB();return true;}
+  if(!window.firebase||!FIREBASE_CONFIG.apiKey||FIREBASE_CONFIG.apiKey.includes('여기')||!FIREBASE_CONFIG.databaseURL)return false;
+  try{firebase.initializeApp(FIREBASE_CONFIG);db=firebase.database();db.ref('.info/serverTimeOffset').on('value',s=>offset=s.val()||0);return true;}catch(e){console.error(e);return false;}
+}
+const R=(code,sub='')=>db.ref(`${ROOT}/${code}${sub?'/'+sub:''}`);
+
+/* ================= 문제 은행 ================= */
+// 게임 1: 별 거리 경매 — 단위 pc
+const AUCTION=[
+  {type:'num',title:'연주 시차로 거리 구하기',clue:'별 <b>알파</b>의 연주 시차는 <b>0.5″</b>입니다.<br>이 별까지의 거리는 몇 pc일까요?',ans:2,explain:'거리(pc) = 1 ÷ 연주 시차(″) = 1 ÷ 0.5 = <b>2 pc</b>'},
+  {type:'num',title:'연주 시차로 거리 구하기',clue:'별 <b>베타</b>의 연주 시차는 <b>0.1″</b>입니다.<br>이 별까지의 거리는 몇 pc일까요?',ans:10,explain:'1 ÷ 0.1 = <b>10 pc</b>. 연주 시차가 작을수록 멀어요.'},
+  {type:'num',title:'연주 시차로 거리 구하기',clue:'별 <b>감마</b>의 연주 시차는 <b>0.25″</b>입니다.<br>거리는 몇 pc일까요?',ans:4,explain:'1 ÷ 0.25 = <b>4 pc</b>'},
+  {type:'num',title:'함정 주의! 시차 vs 연주 시차',clue:'6개월 간격으로 별 <b>델타</b>를 관측했더니 <b>시차가 0.4″</b>였습니다.<br>이 별까지의 거리는 몇 pc일까요?',ans:5,explain:'연주 시차는 시차의 <b>절반</b> → 0.2″. 거리 = 1 ÷ 0.2 = <b>5 pc</b>'},
+  {type:'num',title:'두 등급으로 거리 구하기',clue:'별 <b>엡실론</b>의 겉보기 등급은 <b>3등급</b>, 절대 등급도 <b>3등급</b>입니다.<br>거리는 몇 pc일까요?',ans:10,explain:'두 등급이 같으면 <b>10 pc</b>에 있는 별이에요.'},
+  {type:'num',title:'두 등급으로 거리 구하기',clue:'별 <b>제타</b>의 겉보기 등급은 <b>6등급</b>, 절대 등급은 <b>1등급</b>입니다.<br>거리는 몇 pc일까요?<div class="dim" style="margin-top:6px">힌트: 5등급 차이 = 밝기 100배 = 거리 10배</div>',ans:100,explain:'겉보기가 5등급 더 어두움 → 10 pc보다 10배 멀다 → <b>100 pc</b>'},
+  {type:'num',title:'두 등급으로 거리 구하기',clue:'별 <b>에타</b>의 겉보기 등급은 <b>2등급</b>, 절대 등급은 <b>7등급</b>입니다.<br>거리는 몇 pc일까요?<div class="dim" style="margin-top:6px">힌트: 5등급 차이 = 밝기 100배 = 거리 10배</div>',ans:1,explain:'겉보기가 5등급 더 밝음 → 10 pc보다 10배 가깝다 → <b>1 pc</b>'},
+  {type:'num',title:'광년을 파섹으로',clue:'별 <b>세타</b>에서 출발한 빛이 지구에 오는 데 <b>32.6년</b> 걸렸습니다.<br>이 별까지의 거리는 몇 pc일까요? (1 pc ≈ 3.26 광년)',ans:10,explain:'32.6 광년 ÷ 3.26 = <b>10 pc</b>'},
+  {type:'num',title:'광년을 파섹으로',clue:'별 <b>이오타</b>까지의 거리는 <b>326 광년</b>입니다.<br>몇 pc일까요? (1 pc ≈ 3.26 광년)',ans:100,explain:'326 ÷ 3.26 = <b>100 pc</b>'},
+  {type:'num',title:'연주 시차로 거리 구하기',clue:'별 <b>카파</b>의 연주 시차는 <b>0.02″</b>입니다.<br>거리는 몇 pc일까요?',ans:50,explain:'1 ÷ 0.02 = <b>50 pc</b>'},
+  {type:'choice',title:'더 먼 별은?',clue:'별 A의 연주 시차는 <b>0.3″</b>, 별 B의 연주 시차는 <b>0.05″</b>입니다.<br>지구에서 <b>더 멀리</b> 있는 별은?',opts:['별 A','별 B','거리가 같다','알 수 없다'],ans:1,explain:'연주 시차가 <b>작을수록 멀다</b> → 별 B (20 pc), 별 A는 약 3.3 pc'},
+  {type:'choice',title:'10 pc보다 먼 별은?',clue:'<b>시리우스</b>: 겉보기 −1.5, 절대 1.4<br><b>베텔게우스</b>: 겉보기 0.6, 절대 −5.9<br>10 pc보다 <b>멀리</b> 있는 별은?',opts:['시리우스','베텔게우스','둘 다','둘 다 아니다'],ans:1,explain:'겉보기 등급 &gt; 절대 등급이면 10 pc보다 멀다 → <b>베텔게우스</b>'},
+  {type:'choice',title:'가장 먼 별은?',clue:'<b>알타이르</b>: 겉보기 0.77, 절대 2.2<br><b>아르크투루스</b>: 겉보기 −0.04, 절대 −0.3<br><b>리겔</b>: 겉보기 0.12, 절대 −6.8<br>가장 <b>먼</b> 별은?',opts:['알타이르','아르크투루스','리겔','셋 다 같다'],ans:2,explain:'(겉보기 − 절대)가 가장 큰 별이 가장 멀다 → 리겔 (+6.92)'},
+  {type:'choice',title:'실제로 가장 밝은 별은?',clue:'<b>태양</b>: 겉보기 −26.7, 절대 4.8<br><b>시리우스</b>: 겉보기 −1.5, 절대 1.4<br><b>리겔</b>: 겉보기 0.12, 절대 −6.8<br><b>실제로</b> 가장 밝은 별은?',opts:['태양','시리우스','리겔','알 수 없다'],ans:2,explain:'실제 밝기는 <b>절대 등급</b>으로 비교! 가장 작은 −6.8등급인 <b>리겔</b>'},
+  {type:'num',title:'두 등급으로 거리 구하기',clue:'별 <b>람다</b>의 겉보기 등급은 <b>11등급</b>, 절대 등급은 <b>1등급</b>입니다.<br>거리는 몇 pc일까요?<div class="dim" style="margin-top:6px">힌트: 5등급 차이마다 거리 10배</div>',ans:1000,explain:'10등급 차이 = 5등급 차이 2번 → 10 × 10 × 10 pc = <b>1000 pc</b>'}
+];
+// 게임 2: 밤하늘 관측대 — 1월 사진(A)과 7월 사진(B)
+// t: 별 목록 {x,y(0~1), s: 이동 칸수, l: 표시 이름}
+const OBSERVE=[
+  {type:'tap',title:'움직인 별을 찾아라!',prompt:'1월과 7월에 찍은 두 사진에서 <b>위치가 바뀐 별 1개</b>를 찾아 눌러 보세요.',sky:{seed:11,n:55,t:[{x:.63,y:.42,s:3}]},explain:'가까운 별은 지구가 공전하면 배경 별 사이에서 위치가 달라져 보여요.'},
+  {type:'choice',title:'가장 가까운 별은?',prompt:'별 A~D 중 지구에서 <b>가장 가까운 별</b>은?',sky:{seed:21,n:45,t:[{x:.2,y:.3,s:2,l:'A'},{x:.45,y:.65,s:5,l:'B'},{x:.7,y:.28,s:1,l:'C'},{x:.82,y:.7,s:3,l:'D'}]},opts:['A','B','C','D'],ans:1,explain:'위치 변화(시차)가 <b>가장 큰 별 B</b>가 가장 가까워요.'},
+  {type:'choice',title:'가장 먼 별은?',prompt:'별 A~D 중 지구에서 <b>가장 먼 별</b>은? (모두 위치가 조금씩 변해요)',sky:{seed:31,n:45,t:[{x:.25,y:.62,s:4,l:'A'},{x:.42,y:.25,s:1,l:'B'},{x:.66,y:.55,s:2,l:'C'},{x:.85,y:.3,s:3,l:'D'}]},opts:['A','B','C','D'],ans:1,explain:'시차가 <b>가장 작은 별 B</b>가 가장 멀어요.'},
+  {type:'tap',title:'숨은 별 찾기 (어려움)',prompt:'이번엔 아주 조금 움직여요. <b>위치가 바뀐 별 1개</b>를 찾아 누르세요.',sky:{seed:41,n:75,t:[{x:.31,y:.71,s:1.4}]},explain:'시차가 작은 별은 멀리 있는 별이에요. 그래서 측정이 어려워요!'},
+  {type:'choice',title:'가까운 순서대로',prompt:'별 A, B, C를 <b>지구에서 가까운 순서</b>로 나열하면?',sky:{seed:51,n:45,t:[{x:.22,y:.4,s:1,l:'A'},{x:.5,y:.7,s:4,l:'B'},{x:.78,y:.35,s:2,l:'C'}]},opts:['A → B → C','B → C → A','C → A → B','A → C → B'],ans:1,explain:'시차 큰 순서 = 가까운 순서 → <b>B(4칸) → C(2칸) → A(1칸)</b>'},
+  {type:'choice',title:'거리 계산 ①',prompt:'모눈 <b>1칸 = 0.1″</b>입니다. 별 S의 위치 변화(시차)를 재고, 별 S까지의 <b>거리</b>를 구하세요.',sky:{seed:61,n:35,grid:'1칸 = 0.1″',t:[{x:.5,y:.5,s:4,l:'S'}]},opts:['5 pc','2.5 pc','0.2 pc','10 pc'],ans:0,explain:'시차 4칸 = 0.4″ → 연주 시차 = 절반 = 0.2″ → 거리 = 1 ÷ 0.2 = <b>5 pc</b><br><span class="dim">2.5 pc를 골랐다면 ‘절반’을 빼먹은 거예요!</span>'},
+  {type:'choice',title:'연주 시차 구하기',prompt:'모눈 <b>1칸 = 0.05″</b>입니다. 별 S의 <b>연주 시차</b>는?',sky:{seed:71,n:35,grid:'1칸 = 0.05″',t:[{x:.48,y:.45,s:6,l:'S'}]},opts:['0.15″','0.3″','0.6″','0.05″'],ans:0,explain:'시차 6칸 × 0.05″ = 0.3″ → 연주 시차는 그 절반 = <b>0.15″</b>'},
+  {type:'choice',title:'거리 계산 ②',prompt:'모눈 <b>1칸 = 0.1″</b>입니다. 별 S까지의 <b>거리</b>는?',sky:{seed:81,n:35,grid:'1칸 = 0.1″',t:[{x:.52,y:.55,s:2,l:'S'}]},opts:['0.1 pc','5 pc','10 pc','20 pc'],ans:2,explain:'시차 2칸 = 0.2″ → 연주 시차 0.1″ → 거리 = 1 ÷ 0.1 = <b>10 pc</b>'},
+  {type:'choice',title:'움직이지 않는 별',prompt:'6개월 간격 사진에서 별 D는 <b>위치가 전혀 변하지 않았어요</b>. 그 까닭으로 알맞은 것은?',sky:{seed:91,n:45,t:[{x:.3,y:.45,s:3,l:'C'},{x:.7,y:.5,s:0,l:'D'}]},opts:['너무 멀어서 시차가 매우 작다','지구와 같이 움직인다','태양보다 가깝다','별 D는 스스로 빛을 내지 않는다'],ans:0,explain:'아주 먼 별은 시차가 너무 작아 위치 변화가 거의 보이지 않아요. 그래서 연주 시차는 <b>가까운 별</b>에 이용해요.'},
+  {type:'choice',title:'가장 가까운 별은? (도전)',prompt:'별 A~D 중 <b>가장 가까운 별</b>은?',sky:{seed:101,n:65,t:[{x:.18,y:.6,s:2.5,l:'A'},{x:.4,y:.3,s:3,l:'B'},{x:.62,y:.68,s:3.5,l:'C'},{x:.85,y:.38,s:2,l:'D'}]},opts:['A','B','C','D'],ans:2,explain:'깜빡이로 잘 비교하면 <b>C</b>가 가장 많이 움직여요.'}
+];
+const GAMES={
+  auction:{name:'별 거리 경매장',icon:'💰',bank:AUCTION,dur:60,start:1000,desc:'단서를 보고 별까지의 거리를 맞히고, 자신 있는 만큼 코인을 겁니다. 맞히면 건 만큼 얻고, 틀리면 잃어요.'},
+  observe:{name:'밤하늘 관측대 챌린지',icon:'🔭',bank:OBSERVE,dur:45,start:0,desc:'1월·7월 사진을 깜빡이며 비교해 움직인 별을 찾고, 가까운 별과 거리를 알아냅니다. 빨리 맞힐수록 높은 점수!'}
+};
+
+/* ================= 밤하늘 사진 그리기 ================= */
+function drawSky(cv,sky,mode,opt={}){
+  const r=cv.getBoundingClientRect();const dpr=Math.min(devicePixelRatio||1,2);const w=r.width,h=r.height;
+  if(cv.width!==Math.round(w*dpr)){cv.width=Math.round(w*dpr);cv.height=Math.round(h*dpr);}
+  const c=cv.getContext('2d');c.setTransform(dpr,0,0,dpr,0,0);c.fillStyle='#02040d';c.fillRect(0,0,w,h);
+  const u=w/32;
+  if(sky.grid){c.strokeStyle='rgba(124,196,255,.18)';c.lineWidth=1;for(let x=0;x<=w;x+=u){c.beginPath();c.moveTo(x,0);c.lineTo(x,h);c.stroke();}for(let y=h/2%u;y<=h;y+=u){c.beginPath();c.moveTo(0,y);c.lineTo(w,y);c.stroke();}
+    c.fillStyle='rgba(4,7,20,.8)';c.fillRect(w-112,6,106,26);c.fillStyle='#7cc4ff';c.font='700 14px "Noto Sans KR",sans-serif';c.textAlign='center';c.fillText(sky.grid,w-59,24);}
+  const g=rng(sky.seed);
+  const star=(x,y,s,col,a=1)=>{const gr=c.createRadialGradient(x,y,0,x,y,s*3);gr.addColorStop(0,`rgba(255,255,255,${a})`);gr.addColorStop(.3,`rgba(${col},${a*.8})`);gr.addColorStop(1,`rgba(${col},0)`);c.fillStyle=gr;c.beginPath();c.arc(x,y,s*3,0,7);c.fill();};
+  for(let i=0;i<sky.n;i++){const x=g()*w,y=g()*h,s=1+g()*2.2,warm=g();if(sky.t.some(t=>Math.hypot(t.x*w-x,t.y*h-y)<u*2.5))continue;star(x,y,s,warm<.3?'255,210,170':warm<.6?'200,215,255':'255,255,240',.95);}
+  // 표적 별
+  sky.t.forEach(t=>{const pos=m=>[t.x*w+(m==='A'?-1:1)*t.s*u/2,t.y*h];
+    const draw=(m,a,col)=>{const[x,y]=pos(m);star(x,y,2.6,col||'255,250,225',a);};
+    if(mode==='both'){draw('A',.95,'255,120,120');draw('B',.95,'110,200,255');}else draw(mode,1);
+    if(t.l){const[x,y]=pos(mode==='both'?'B':mode);c.font='900 18px "Noto Sans KR",sans-serif';c.textAlign='center';c.fillStyle='rgba(4,7,20,.75)';c.fillRect(x-13,y-36,26,24);c.fillStyle='#ffd36b';c.fillText(t.l,x,y-17);}
+    if(opt.reveal){const a=pos('A'),b=pos('B');c.strokeStyle='#6fe0a8';c.lineWidth=2.5;c.beginPath();c.arc(a[0],a[1],12,0,7);c.stroke();c.beginPath();c.arc(b[0],b[1],12,0,7);c.stroke();if(t.s>0){c.beginPath();c.moveTo(a[0],a[1]+20);c.lineTo(b[0],b[1]+20);c.stroke();c.font='900 15px "Noto Sans KR",sans-serif';c.fillStyle='#6fe0a8';c.textAlign='center';c.fillText(`${t.s}칸`,(a[0]+b[0])/2,a[1]+38);}}
+  });
+  if(opt.tap){const x=opt.tap[0]*w,y=opt.tap[1]*h;c.strokeStyle='#ffd36b';c.lineWidth=3;c.beginPath();c.arc(x,y,18,0,7);c.stroke();c.beginPath();c.moveTo(x-26,y);c.lineTo(x-10,y);c.moveTo(x+10,y);c.lineTo(x+26,y);c.moveTo(x,y-26);c.lineTo(x,y-10);c.moveTo(x,y+10);c.lineTo(x,y+26);c.stroke();}
+  c.font='900 15px "Noto Sans KR",sans-serif';c.textAlign='left';c.fillStyle=mode==='A'?'#ff9a9a':mode==='B'?'#8fd0ff':'#fff';c.fillText(mode==='A'?'📷 1월 사진':mode==='B'?'📷 7월 사진':'겹쳐 보기 (빨강 1월 · 파랑 7월)',10,22);
+}
+// 하늘 뷰어 (깜빡이 포함)
+function skyViewer(holder,sky,opt={}){
+  holder.innerHTML=`<canvas class="sky" style="aspect-ratio:16/10"></canvas><div class="skytools"><button data-m="A">1월 사진</button><button data-m="B">7월 사진</button><button data-m="blink">깜빡이 ▶</button><button data-m="both">겹쳐 보기</button></div>`;
+  const cv=$('canvas',holder);let mode='A',blink=opt.reveal?false:true,ph=0,timer=null,tap=null;
+  const render=()=>{drawSky(cv,sky,blink?(ph?'B':'A'):mode,{reveal:opt.reveal,tap});$$('.skytools button',holder).forEach(b=>b.classList.toggle('on',b.dataset.m===(blink?'blink':mode)));};
+  const setBlink=v=>{blink=v;clearInterval(timer);if(v)timer=setInterval(()=>{if(!document.body.contains(cv)){clearInterval(timer);return;}ph^=1;render();},650);render();};
+  $$('.skytools button',holder).forEach(b=>b.onclick=()=>{if(b.dataset.m==='blink')setBlink(!blink);else{mode=b.dataset.m;setBlink(false);}});
+  if(opt.onTap)cv.addEventListener('click',e=>{const r=cv.getBoundingClientRect();tap=[(e.clientX-r.left)/r.width,(e.clientY-r.top)/r.height];render();opt.onTap(tap);});
+  if(opt.reveal)mode='both';
+  setBlink(blink);
+  return{render,stop:()=>clearInterval(timer)};
+}
+function tapCorrect(sky,tap){const t=sky.t[0];const ar=16/10;return Math.hypot((tap[0]-t.x)*ar,tap[1]-t.y)<0.09+t.s/32/2*ar;}
+
+/* ================= 화면: 시작 ================= */
+function home(){
+  if(params.get('room')){joinScreen(params.get('room'));return;}
+  app.innerHTML=`<div class="wrap center" style="padding-top:8vh">
+    <div class="tag">중2 과학 · Ⅷ. 별과 우주</div>
+    <h1 style="margin:10px 0">✦ 별과 우주 <span class="gold">게임방</span></h1>
+    <p class="muted" style="font-size:19px">별 거리 경매장 · 밤하늘 관측대 챌린지</p>
+    <div class="row" style="justify-content:center;margin-top:30px;gap:18px">
+      <button class="btn pri" style="min-width:240px;min-height:90px;font-size:24px" id="goJoin">🙋 학생 참가하기</button>
+      <button class="btn blue" style="min-width:240px;min-height:90px;font-size:24px" id="goHost">🧑‍🏫 선생님 게임 만들기</button>
+    </div>
+    ${db?'':`<div class="warn" style="max-width:640px;margin:30px auto;text-align:left"><b>⚠️ Firebase 설정이 아직 없어요.</b><br>index.html 맨 위 <code>FIREBASE_CONFIG</code>에 element-game 프로젝트 설정을 붙여 넣어 주세요.<br><span class="dim">설정 전 미리 보기: 주소 끝에 <code>?mock=1</code>을 붙이면 같은 컴퓨터의 여러 탭으로 시험해 볼 수 있어요.</span></div>`}
+  </div>`;
+  $('#goJoin').onclick=()=>joinScreen('');
+  $('#goHost').onclick=()=>hostSetup();
+}
+
+/* ================= 선생님 ================= */
+let H={code:null,meta:null,players:{},answers:{},offs:[],tick:null,revealing:false};
+function hostSetup(){
+  if(!db){toast('Firebase 설정이 필요해요');return;}
+  let game='auction';
+  app.innerHTML=`<div class="wrap" style="max-width:980px">
+    <button class="btn ghost sm" id="back">← 처음으로</button>
+    <h2 style="margin-top:12px">어떤 게임을 할까요?</h2>
+    <div class="gamepick" style="margin:14px 0">${Object.entries(GAMES).map(([k,g])=>`<div class="card gcard ${k===game?'on':''}" data-g="${k}"><div class="ic">${g.icon}</div><h2>${g.name}</h2><p class="muted" style="margin:0">${g.desc}</p><p class="dim" style="margin:8px 0 0">문제 은행 ${g.bank.length}문항</p></div>`).join('')}</div>
+    <div class="card"><div class="row" style="gap:24px">
+      <label>문제 수 <select id="nq" class="btn sm" style="min-height:44px"></select></label>
+      <label>제한 시간 <select id="dur" class="btn sm" style="min-height:44px">${[20,30,45,60,90].map(s=>`<option value="${s}">${s}초</option>`).join('')}</select></label>
+      <label class="row" style="gap:6px"><input type="checkbox" id="shuf" checked style="width:22px;height:22px"> 문제 순서 섞기</label>
+    </div></div>
+    <div class="row" style="margin-top:16px;justify-content:flex-end"><button class="btn pri" id="mk" style="min-width:220px">게임방 만들기 →</button></div>
+  </div>`;
+  const syncOpts=()=>{const g=GAMES[game];$('#nq').innerHTML=Array.from({length:g.bank.length-2},(_,i)=>i+3).map(n=>`<option ${n===Math.min(8,g.bank.length)?'selected':''}>${n}</option>`).join('');$('#dur').value=g.dur;$$('.gcard').forEach(c=>c.classList.toggle('on',c.dataset.g===game));};
+  $$('.gcard').forEach(c=>c.onclick=()=>{game=c.dataset.g;syncOpts();});syncOpts();
+  $('#back').onclick=home;
+  $('#mk').onclick=async()=>{
+    $('#mk').disabled=true;
+    const g=GAMES[game];let order=g.bank.map((_,i)=>i);if($('#shuf').checked)order.sort(()=>Math.random()-.5);order=order.slice(0,+$('#nq').value);
+    let code;for(let i=0;i<20;i++){code=String(Math.floor(1000+Math.random()*9000));const s=await R(code,'meta').once('value');const m=s.val();if(!m||now()-(m.created||0)>6*3600e3)break;}
+    await R(code).remove();
+    await R(code,'meta').set({game,state:'lobby',q:-1,order,dur:+$('#dur').value,created:now(),qStart:0});
+    try{localStorage.setItem('sg_host',code);}catch(e){}
+    hostRun(code);
+  };
+}
+function hostRun(code){
+  H.offs.forEach(f=>f());H.offs=[];clearInterval(H.tick);
+  H.code=code;H.players={};H.answers={};H.meta=null;
+  const on=(sub,cb)=>{const ref=R(code,sub);const fn=ref.on('value',s=>cb(s.val()));H.offs.push(()=>ref.off('value',fn));};
+  on('meta',m=>{const prev=H.meta;H.meta=m;if(!m){home();return;}
+    if(!prev||prev.state!==m.state||prev.q!==m.q){if(prev&&prev.q!==m.q){H.answers={};listenAnswers();}hostRender();}});
+  on('players',p=>{H.players=p||{};hostPartial();});
+  let ansOff=null;
+  function listenAnswers(){if(ansOff)ansOff();if(!H.meta||H.meta.q<0){return;}const ref=R(code,'answers/'+H.meta.q);const fn=ref.on('value',s=>{H.answers=s.val()||{};hostPartial();});ansOff=()=>ref.off('value',fn);}
+  H.offs.push(()=>ansOff&&ansOff());
+  setTimeout(listenAnswers,300);
+  H.tick=setInterval(hostTick,250);
+}
+const bankOf=m=>GAMES[m.game].bank;
+const curQ=m=>bankOf(m)[m.order[m.q]];
+function joinURL(code){return location.origin+location.pathname+'?room='+code+(params.get('mock')==='1'?'&mock=1':'');}
+function hostRender(){
+  const m=H.meta;if(!m)return;const g=GAMES[m.game];
+  if(m.state==='lobby'){
+    app.innerHTML=`<div class="wrap"><div class="hostgrid">
+      <div class="card center"><div class="tag">${g.icon} ${g.name}</div>
+        <p class="muted" style="font-size:20px;margin:16px 0 4px">태블릿으로 QR을 찍거나, 게임방 번호를 입력하세요</p>
+        <div class="row" style="justify-content:center;gap:40px;margin:10px 0"><div id="qrbox"></div><div><div class="dim">게임방 번호</div><div class="code">${m.code||H.code}</div></div></div>
+        <div class="dim" style="word-break:break-all">${esc(joinURL(H.code))}</div></div>
+      <div class="card"><h2>참가자 <span class="gold" id="pc">0</span>명</h2><div class="chips" id="pl" style="min-height:120px"></div>
+        <div class="row" style="margin-top:16px;justify-content:space-between"><button class="btn ghost sm" id="endRoom">게임방 닫기</button><button class="btn pri" id="start" style="min-width:200px">게임 시작 ▶</button></div>
+        <p class="dim" style="margin-bottom:0">문제 ${m.order.length}개 · 문제당 ${m.dur}초</p></div>
+    </div></div>`;
+    try{new QRCode($('#qrbox'),{text:joinURL(H.code),width:220,height:220,correctLevel:QRCode.CorrectLevel.M});}catch(e){$('#qrbox').innerHTML='<div class="dim">(QR 불러오기 실패 — 번호로 입장)</div>';}
+    $('#start').onclick=()=>nextQ();
+    $('#endRoom').onclick=async()=>{if(confirm('게임방을 닫을까요?')){await R(H.code).remove();try{localStorage.removeItem('sg_host');}catch(e){}H.offs.forEach(f=>f());clearInterval(H.tick);home();}};
+    hostPartial();return;
+  }
+  if(m.state==='question'){
+    const q=curQ(m);
+    app.innerHTML=`<div class="wrap"><div class="hostgrid">
+      <div class="card"><div class="row" style="justify-content:space-between"><span class="tag">${g.icon} ${m.q+1} / ${m.order.length}</span>${m.game==='auction'&&m.q===m.order.length-1?'<span class="mult">🔥 마지막 라운드: 수익·손실 2배!</span>':''}</div>
+        <div class="qtitle">${q.title}</div>
+        ${m.game==='auction'?`<div class="clue">${q.clue}</div>${q.type==='choice'?`<div class="opts" style="margin-top:12px">${q.opts.map(o=>`<button disabled>${o}</button>`).join('')}</div>`:'<p class="muted" style="font-size:20px">답은 <b>pc 단위 숫자</b>로 입력해요.</p>'}`
+        :`<div class="clue" style="margin-bottom:10px">${q.prompt}</div><div id="skyH"></div>${q.type==='choice'?`<div class="opts" style="margin-top:12px">${q.opts.map(o=>`<button disabled>${o}</button>`).join('')}</div>`:''}`}
+      </div>
+      <div class="stack" style="display:flex;flex-direction:column;gap:14px">
+        <div class="card center"><div class="timer" id="tm">--</div><div class="timerbar" style="margin-top:10px"><i id="tb" style="width:100%"></i></div>
+          <p style="font-size:22px;margin:14px 0 4px">제출 <b class="gold" id="ac">0</b> / <span id="pc2">0</span>명</p>
+          <button class="btn pri" id="rv" style="width:100%;margin-top:8px">정답 공개</button></div>
+        <div class="card"><div class="dim">제출한 학생</div><div class="chips" id="al" style="margin-top:8px"></div></div>
+      </div></div></div>`;
+    if(m.game==='observe')skyViewer($('#skyH'),q.sky);
+    $('#rv').onclick=()=>reveal();
+    hostPartial();hostTick();return;
+  }
+  if(m.state==='reveal'){
+    const q=curQ(m);const last=m.q===m.order.length-1;
+    app.innerHTML=`<div class="wrap"><div class="hostgrid">
+      <div class="card"><span class="tag">${g.icon} ${m.q+1} / ${m.order.length} · 정답 공개</span><div class="qtitle">${q.title}</div>
+        ${m.game==='observe'?'<div id="skyH" style="margin-bottom:12px"></div>':`<div class="clue" style="font-size:19px;margin-bottom:12px">${q.clue}</div>`}
+        <div class="ansbox"><div class="dim">정답</div><div class="big">${q.type==='num'?q.ans+' pc':q.type==='tap'?'초록 원의 별':q.opts[q.ans]}</div><div class="explain">${q.explain}</div></div>
+        <h3 style="margin:18px 0 8px">우리 반의 답</h3><div class="dist" id="dist"></div></div>
+      <div class="card"><h2>🏆 순위</h2><div class="lb" id="lb"></div>
+        <button class="btn pri" id="nx" style="width:100%;margin-top:14px">${last?'최종 결과 보기 🏁':'다음 문제 ▶'}</button></div>
+    </div></div>`;
+    if(m.game==='observe')skyViewer($('#skyH'),q.sky,{reveal:true});
+    $('#nx').onclick=()=>last?R(H.code,'meta').update({state:'end'}):nextQ();
+    hostPartial();return;
+  }
+  if(m.state==='end'){
+    const arr=rankList();const top=arr.slice(0,3);const h=[230,170,130];const ordr=[1,0,2];
+    app.innerHTML=`<div class="wrap center"><div class="tag">${g.icon} ${g.name}</div><h1 style="margin-top:10px">🏁 최종 결과</h1>
+      <div class="podium">${ordr.map(i=>top[i]?`<div class="pod"><div class="nm">${esc(top[i].name)}</div><div class="sc">${top[i].score.toLocaleString('ko-KR')}${m.game==='auction'?' 코인':'점'}</div><div class="blk" style="height:${h[i]}px;background:${['#ffd36b','#d7dbe8','#e0a46b'][i]}">${i+1}</div></div>`:'').join('')}</div>
+      <div class="card" style="max-width:760px;margin:0 auto;text-align:left"><div class="lb">${arr.map((p,i)=>`<div class="lbr"><div class="rk">${i+1}</div><div>${esc(p.name)}</div><div class="dim">정답 ${p.correct||0}개</div><div class="sc">${p.score.toLocaleString('ko-KR')}</div></div>`).join('')}</div></div>
+      <div class="row" style="justify-content:center;margin-top:18px"><button class="btn" id="again">같은 학생들과 다른 게임 하기</button><button class="btn ghost" id="close">게임방 닫기</button></div></div>`;
+    $('#again').onclick=()=>switchGame();
+    $('#close').onclick=async()=>{await R(H.code).remove();try{localStorage.removeItem('sg_host');}catch(e){}H.offs.forEach(f=>f());clearInterval(H.tick);home();};
+  }
+}
+function rankList(){return Object.entries(H.players).map(([id,p])=>({id,...p,score:p.score||0})).sort((a,b)=>b.score-a.score||(b.correct||0)-(a.correct||0));}
+function hostPartial(){
+  const m=H.meta;if(!m)return;const ps=H.players,n=Object.keys(ps).length;
+  if(m.state==='lobby'&&$('#pl')){$('#pc').textContent=n;$('#pl').innerHTML=Object.values(ps).map(p=>`<span class="chip">${esc(p.name)}</span>`).join('')||'<span class="dim">아직 아무도 없어요…</span>';}
+  if(m.state==='question'&&$('#ac')){const a=H.answers;const k=Object.keys(a).length;$('#ac').textContent=k;$('#pc2').textContent=n;$('#al').innerHTML=Object.keys(a).map(id=>`<span class="chip">${esc((ps[id]||{}).name||'?')}</span>`).join('');if(n>0&&k>=n&&!H.revealing)setTimeout(()=>{if(H.meta.state==='question')reveal();},800);}
+  if(m.state==='reveal'&&$('#lb')){
+    const q=curQ(m);const res=m.results||{};
+    $('#lb').innerHTML=rankList().slice(0,8).map((p,i)=>{const d=(res[p.id]||{}).d||0;return`<div class="lbr"><div class="rk">${i+1}</div><div>${esc(p.name)}</div><div class="dl ${d>0?'green':d<0?'red':'dim'}">${d>0?'+'+d:d<0?d:''}</div><div class="sc">${p.score.toLocaleString('ko-KR')}</div></div>`;}).join('');
+    // 분포
+    const a=Object.values(H.answers);const tot=Math.max(1,a.length);let rows=[];
+    if(q.type==='num'){const cnt={};a.forEach(x=>{const k=+x.v;cnt[k]=(cnt[k]||0)+1;});rows=Object.entries(cnt).map(([v,c])=>[v+' pc',c,Math.abs(+v-q.ans)/q.ans<=0.1]).sort((x,y)=>y[1]-x[1]).slice(0,6);}
+    else if(q.type==='choice'){rows=q.opts.map((o,i)=>[o,a.filter(x=>x.v===i).length,i===q.ans]);}
+    else{const ok=a.filter(x=>tapCorrect(q.sky,x.v)).length;rows=[['찾았어요',ok,true],['다른 별을 눌렀어요',a.length-ok,false]];}
+    if($('#dist'))$('#dist').innerHTML=rows.length?rows.map(r=>`<div class="drow"><div>${r[2]?'✅ ':''}${r[0]}</div><div class="dbar"><i class="${r[2]?'ok':''}" style="width:${r[1]/tot*100}%"></i></div><div><b>${r[1]}</b>명</div></div>`).join(''):'<div class="dim">제출한 답이 없어요</div>';
+  }
+}
+function hostTick(){const m=H.meta;if(!m||m.state!=='question'||!$('#tm'))return;const left=Math.max(0,m.qStart+m.dur*1000-now());$('#tm').textContent=Math.ceil(left/1000);$('#tm').style.color=left<10000?'var(--red)':'';$('#tb').style.width=(left/(m.dur*1000)*100)+'%';if(left<=0&&!H.revealing)reveal();}
+async function nextQ(){const m=H.meta;H.revealing=false;const q=m.q+1;await R(H.code,'meta').update({state:'question',q,qStart:now()+1500,results:null});}
+async function reveal(){
+  if(H.revealing)return;H.revealing=true;
+  const m=H.meta;const q=curQ(m);const ans=(await R(H.code,'answers/'+m.q).once('value')).val()||{};H.answers=ans;
+  const up={};const results={};const last=m.q===m.order.length-1;
+  for(const[id,p]of Object.entries(H.players)){
+    const a=ans[id];let ok=false,d=0,score=p.score||0;
+    if(a){
+      if(q.type==='num')ok=Math.abs(+a.v-q.ans)/q.ans<=0.1;else if(q.type==='choice')ok=a.v===q.ans;else ok=tapCorrect(q.sky,a.v);
+      if(m.game==='auction'){const mult=last?2:1;const bet=Math.min(a.bet||0,score);d=ok?bet*mult:-bet*mult;}
+      else{const rem=clamp((m.qStart+m.dur*1000-a.t)/(m.dur*1000),0,1);d=ok?500+Math.round(500*rem):0;}
+    }
+    let ns=score+d;let rescue=false;if(m.game==='auction'&&ns<100){rescue=true;ns=100;}
+    up[`players/${id}/score`]=ns;up[`players/${id}/correct`]=(p.correct||0)+(ok?1:0);
+    results[id]={ok:a?ok:null,d,rescue};
+  }
+  up['meta/state']='reveal';up['meta/results']=results;
+  await R(H.code).update(up);
+}
+async function switchGame(){
+  const m=H.meta;const game=m.game==='auction'?'observe':'auction';const g=GAMES[game];
+  let order=g.bank.map((_,i)=>i).sort(()=>Math.random()-.5).slice(0,Math.min(8,g.bank.length));
+  const up={answers:null,meta:{game,state:'lobby',q:-1,order,dur:g.dur,created:now(),qStart:0}};
+  for(const id in H.players){up[`players/${id}/score`]=g.start;up[`players/${id}/correct`]=0;}
+  await R(H.code).update(up);
+}
+
+/* ================= 학생 ================= */
+let P={code:null,id:null,name:'',meta:null,me:null,myAns:null,offs:[],tick:null,num:'',bet:0.25,choice:null,tap:null,viewer:null};
+function joinScreen(code){
+  if(!db){app.innerHTML=`<div class="wrap"><div class="warn">게임 서버 설정이 아직 없어요. 선생님께 알려 주세요.</div></div>`;return;}
+  let saved=null;try{saved=JSON.parse(localStorage.getItem('sg_player')||'null');}catch(e){}
+  app.innerHTML=`<div class="wrap" style="max-width:520px;padding-top:6vh">
+    <div class="center"><div class="tag">✦ 별과 우주 게임방</div><h1 style="margin:10px 0 20px">참가하기</h1></div>
+    <div class="card"><label class="dim">게임방 번호 (4자리)</label><input class="tx" id="jc" inputmode="numeric" maxlength="4" value="${esc(code||'')}" placeholder="0000">
+      <label class="dim" style="display:block;margin-top:14px">번호와 이름 (예: 7 홍길동)</label><input class="tx" id="jn" maxlength="12" placeholder="번호 이름" value="${esc(saved&&saved.name||'')}">
+      <button class="btn pri" id="jb" style="width:100%;margin-top:18px;min-height:64px;font-size:22px">입장하기 🚀</button><div id="jerr" class="red center" style="margin-top:8px"></div></div></div>`;
+  $('#jb').onclick=async()=>{
+    const c=$('#jc').value.trim(),n=$('#jn').value.trim();
+    if(!/^\d{4}$/.test(c)){$('#jerr').textContent='게임방 번호 4자리를 입력하세요';return;}
+    if(n.length<2){$('#jerr').textContent='번호와 이름을 입력하세요';return;}
+    $('#jb').disabled=true;
+    const m=(await R(c,'meta').once('value')).val();
+    if(!m){$('#jerr').textContent='게임방을 찾을 수 없어요. 번호를 확인하세요';$('#jb').disabled=false;return;}
+    let id=saved&&saved.code===c&&saved.id;
+    if(id){const ex=(await R(c,'players/'+id).once('value')).val();if(!ex)id=null;}
+    if(!id){id='p'+Math.random().toString(36).slice(2,10);await R(c,'players/'+id).set({name:n,score:GAMES[m.game].start,correct:0,joined:now()});}
+    else await R(c,'players/'+id+'/name').set(n);
+    try{localStorage.setItem('sg_player',JSON.stringify({code:c,id,name:n}));}catch(e){}
+    playRun(c,id,n);
+  };
+}
+function playRun(code,id,name){
+  P.offs.forEach(f=>f());P.offs=[];clearInterval(P.tick);
+  Object.assign(P,{code,id,name,meta:null,me:null,myAns:null});
+  const on=(sub,cb)=>{const ref=R(code,sub);const fn=ref.on('value',s=>cb(s.val()));P.offs.push(()=>ref.off('value',fn));};
+  on('meta',m=>{const prev=P.meta;P.meta=m;if(!m){app.innerHTML='<div class="wrap"><div class="waiting">게임방이 닫혔어요. 수고했어요! 👋</div></div>';P.offs.forEach(f=>f());return;}
+    if(!prev||prev.state!==m.state||prev.q!==m.q||prev.game!==m.game){if(!prev||prev.q!==m.q||prev.game!==m.game){P.myAns=null;P.num='';P.choice=null;P.tap=null;P.bet=0.25;listenMine();}playRender();}});
+  on('players/'+id,me=>{P.me=me;if(!me&&P.meta){app.innerHTML='<div class="wrap"><div class="waiting">게임방에서 나갔어요.</div></div>';return;}const s=$('#mysc');if(s&&me)s.textContent=fmtScore(me.score);});
+  let off=null;function listenMine(){if(off)off();if(!P.meta||P.meta.q<0)return;const ref=R(code,`answers/${P.meta.q}/${id}`);const fn=ref.on('value',s=>{const had=P.myAns;P.myAns=s.val();if(!had&&P.myAns&&P.meta.state==='question')playRender();});off=()=>ref.off('value',fn);}
+  P.offs.push(()=>off&&off());
+  P.tick=setInterval(playTick,250);
+}
+const fmtScore=s=>(s||0).toLocaleString('ko-KR')+(P.meta&&P.meta.game==='auction'?' 코인':'점');
+function topbar(){return`<div class="pbar"><div class="nm">👤 ${esc(P.name)}</div><div class="dim" id="ptm"></div><div class="sc" id="mysc">${fmtScore(P.me&&P.me.score)}</div></div>`;}
+function playRender(){
+  const m=P.meta;if(!m)return;const g=GAMES[m.game];
+  if(P.viewer){P.viewer.stop();P.viewer=null;}
+  if(m.state==='lobby'){app.innerHTML=topbar()+`<div class="wrap center" style="max-width:600px"><div style="font-size:70px;margin-top:6vh">${g.icon}</div><h2>${g.name}</h2><p class="muted">${g.desc}</p><div class="card" style="margin-top:20px"><div class="spin"></div><p style="font-size:20px;margin:10px 0 0">입장 완료! 선생님이 시작할 때까지 기다려요</p></div></div>`;return;}
+  if(m.state==='question'){
+    const q=curQ(m);const last=m.q===m.order.length-1;
+    if(P.myAns){app.innerHTML=topbar()+`<div class="wrap center" style="max-width:600px"><div class="card" style="margin-top:8vh"><div style="font-size:60px">📨</div><h2>제출 완료!</h2><p class="muted" style="font-size:19px">${m.game==='auction'?`내 답: <b class="gold">${P.myAns.v===undefined?'':q.type==='num'?P.myAns.v+' pc':q.opts[P.myAns.v]}</b> · 베팅 <b class="gold">${P.myAns.bet} 코인</b>`:'다른 친구들을 기다리고 있어요'}</p><div class="spin" style="margin-top:10px"></div></div></div>`;return;}
+    if(m.game==='auction'){
+      const coins=(P.me&&P.me.score)||0;
+      app.innerHTML=topbar()+`<div class="wrap" style="max-width:720px"><div class="row" style="justify-content:space-between"><span class="tag">💰 ${m.q+1} / ${m.order.length}</span>${last?'<span class="mult">🔥 마지막: 2배!</span>':''}</div>
+        <div class="qtitle" style="font-size:22px">${q.title}</div><div class="clue" style="font-size:19px">${q.clue}</div>
+        <div style="margin-top:14px">${q.type==='num'?`<div class="numdisp" id="nd">${P.num||'<span class="dim">거리 입력</span>'} <span class="dim" style="font-size:22px">pc</span></div><div class="keypad" style="margin-top:10px">${['1','2','3','4','5','6','7','8','9','.','0','⌫'].map(k=>`<button data-k="${k}">${k}</button>`).join('')}</div>`
+        :`<div class="opts">${q.opts.map((o,i)=>`<button data-o="${i}" class="${P.choice===i?'on':''}">${o}</button>`).join('')}</div>`}</div>
+        <h3 style="margin:18px 0 6px">얼마나 걸까요? <span class="dim">(가진 코인 ${coins.toLocaleString('ko-KR')})</span></h3>
+        <div class="bets">${[[0.1,'조심'],[0.25,'보통'],[0.5,'자신'],[1,'올인!']].map(([f,l])=>`<button data-b="${f}" class="${P.bet===f?'on':''}">${l}<br><small>${Math.floor(coins*f)}</small></button>`).join('')}</div>
+        <button class="btn pri" id="sub" style="width:100%;margin-top:16px;min-height:68px;font-size:24px">입찰하기 💰</button></div>`;
+      $$('[data-k]').forEach(b=>b.onclick=()=>{const k=b.dataset.k;if(k==='⌫')P.num=P.num.slice(0,-1);else if(k==='.'){if(!P.num.includes('.'))P.num=(P.num||'0')+'.';}else if(P.num.length<8)P.num=(P.num==='0'?'':P.num)+k;$('#nd').innerHTML=(P.num||'<span class="dim">거리 입력</span>')+' <span class="dim" style="font-size:22px">pc</span>';});
+      $$('[data-o]').forEach(b=>b.onclick=()=>{P.choice=+b.dataset.o;$$('[data-o]').forEach(x=>x.classList.toggle('on',x===b));});
+      $$('[data-b]').forEach(b=>b.onclick=()=>{P.bet=+b.dataset.b;$$('[data-b]').forEach(x=>x.classList.toggle('on',x===b));});
+      $('#sub').onclick=()=>{let v;if(q.type==='num'){v=parseFloat(P.num);if(!(v>0)){toast('거리를 입력하세요');return;}}else{if(P.choice===null){toast('답을 고르세요');return;}v=P.choice;}
+        submit({v,bet:Math.max(1,Math.floor(coins*P.bet))});};
+    }else{
+      app.innerHTML=topbar()+`<div class="wrap" style="max-width:900px"><span class="tag">🔭 ${m.q+1} / ${m.order.length}</span><div class="qtitle" style="font-size:22px">${q.title}</div><div class="clue" style="font-size:18px;margin-bottom:10px">${q.prompt}</div>
+        <div id="skyP"></div><p class="dim" style="margin:6px 0">💡 ‘깜빡이’로 두 사진을 번갈아 보면 움직이는 별이 잘 보여요${q.type==='tap'?' · 별을 <b>눌러서</b> 표시하세요':''}</p>
+        ${q.type==='choice'?`<div class="opts">${q.opts.map((o,i)=>`<button data-o="${i}">${o}</button>`).join('')}</div>`:''}
+        <button class="btn pri" id="sub" style="width:100%;margin-top:14px;min-height:64px;font-size:22px">제출하기 ✔</button></div>`;
+      P.viewer=skyViewer($('#skyP'),q.sky,q.type==='tap'?{onTap:t=>{P.tap=t;}}:{});
+      $$('[data-o]').forEach(b=>b.onclick=()=>{P.choice=+b.dataset.o;$$('[data-o]').forEach(x=>x.classList.toggle('on',x===b));});
+      $('#sub').onclick=()=>{let v;if(q.type==='tap'){if(!P.tap){toast('움직인 별을 눌러 표시하세요');return;}v=P.tap;}else{if(P.choice===null){toast('답을 고르세요');return;}v=P.choice;}submit({v});};
+    }
+    playTick();return;
+  }
+  if(m.state==='reveal'){
+    const q=curQ(m);const r=(m.results||{})[P.id];const st=!r||r.ok===null?'na':r.ok?'ok':'ng';
+    const ansTxt=q.type==='num'?q.ans+' pc':q.type==='tap'?'(선생님 화면의 초록 원)':q.opts[q.ans];
+    app.innerHTML=topbar()+`<div class="wrap" style="max-width:640px"><div class="result ${st}" style="margin-top:4vh">
+      <div class="em">${st==='ok'?'🎉':st==='ng'?'😵':'⏰'}</div><h2 style="margin-top:8px">${st==='ok'?'정답!':st==='ng'?'아쉬워요!':'시간 초과'}</h2>
+      <div class="dl ${r&&r.d>0?'green':r&&r.d<0?'red':''}">${r&&r.d?(r.d>0?'+':'')+r.d.toLocaleString('ko-KR'):'±0'}</div>
+      ${r&&r.rescue?'<p class="gold" style="margin:6px 0 0">🛟 코인이 부족해서 100코인을 지원받았어요!</p>':''}
+      <p class="muted" style="margin:10px 0 0">정답: <b class="gold">${ansTxt}</b></p></div>
+      <div class="card explain" style="margin-top:14px">${q.explain}</div>
+      <p class="center dim" style="margin-top:14px">선생님 화면을 보세요 👀</p></div>`;
+    return;
+  }
+  if(m.state==='end'){app.innerHTML=topbar()+`<div class="wrap center" style="max-width:600px"><div style="font-size:70px;margin-top:6vh">🏁</div><h2>게임 끝!</h2><p style="font-size:22px">내 점수 <b class="gold">${fmtScore(P.me&&P.me.score)}</b></p><p class="muted">순위는 선생님 화면에서 확인하세요</p></div>`;}
+}
+async function submit(a){
+  const m=P.meta;if(!m||m.state!=='question')return;
+  if(now()>m.qStart+m.dur*1000+500){toast('시간이 끝났어요');return;}
+  $('#sub')&&($('#sub').disabled=true);
+  a.t=now();await R(P.code,`answers/${m.q}/${P.id}`).set(a);P.myAns=a;playRender();
+}
+function playTick(){const m=P.meta;const el=$('#ptm');if(!m||!el)return;if(m.state!=='question'){el.textContent='';return;}const left=Math.max(0,m.qStart+m.dur*1000-now());el.innerHTML=left>m.dur*1000?'준비…':`⏱ <b style="color:${left<10000?'var(--red)':'var(--text)'};font-size:20px">${Math.ceil(left/1000)}</b>초`;if(left<=0&&!P.myAns&&$('#sub')){$('#sub').disabled=true;$('#sub').textContent='시간 종료';}}
+
+/* ================= 시작 ================= */
+const ok=initDB();
+(function(){
+  if(ok&&!params.get('room')){let hc=null;try{hc=localStorage.getItem('sg_host');}catch(e){}
+    if(hc){R(hc,'meta').once('value').then(s=>{const m=s.val();if(m&&now()-m.created<6*3600e3&&confirm(`진행 중이던 게임방 ${hc}으로 돌아갈까요?`)){hostRun(hc);}else{try{localStorage.removeItem('sg_host');}catch(e){}home();}});return;}}
+  home();
+})();
+</script>
+</body>
+</html>
